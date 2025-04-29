@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, filters
 from .models import Property, User
-from .serializers import PropertySerializer, UserSerializer
+from .serializers import PropertySerializer, SignupSerializer
 from django.contrib.auth import get_user_model
 
 class PropertyListCreateView(generics.ListCreateAPIView):
@@ -15,6 +15,6 @@ class PropertyListCreateView(generics.ListCreateAPIView):
         serializer.save(host=self.request.user)
 
 class SignupView(generics.CreateAPIView):
-    queryset = get_user_model().objects.all()
-    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    serializer_class = SignupSerializer
     permission_classes = [permissions.AllowAny]
