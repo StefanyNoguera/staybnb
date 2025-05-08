@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, filters
-from .models import Property, User
-from .serializers import PropertySerializer, SignupSerializer, UserSerializer
+from .models import Property, User, Booking
+from .serializers import PropertySerializer, SignupSerializer, UserSerializer, BookingSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
@@ -32,3 +32,13 @@ class ProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class BookingListCreateView(generics.ListCreateAPIView):
+    serializer_class = BookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Booking.objects.filter(guest=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(guest=self.request.user)
