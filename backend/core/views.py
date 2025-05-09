@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, permissions, filters
 from .models import Property, User, Booking
 from .serializers import PropertySerializer, SignupSerializer, UserSerializer, BookingSerializer
@@ -7,6 +7,9 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticate
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
+import stripe
+from django.conf import settings
+
 
 
 class PropertyListCreateView(generics.ListCreateAPIView):
@@ -49,3 +52,32 @@ class HostBookingListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Booking.objects.filter(property__host=self.request.user).order_by('-created_at')
+
+class CreateCheckoutSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, property_id):
+        property = get_object_or_404(Property, id=property_id)
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': property.title,
+                    },
+                    'unit_amount': int(property.price_per_night * 100),
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url='http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='http://localhost:3000/cancel',
+            metadata={
+                'user_id': request.user.id,
+                'property_id': property.id,
+            }
+        )
+        return Response({'checkout_url': session.url})
