@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import stripe
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
 
 
 
@@ -81,3 +83,30 @@ class CreateCheckoutSessionView(APIView):
             }
         )
         return Response({'checkout_url': session.url})
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        return HttpResponse(status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        metadata = session.get('metadata', {})
+        user = User.objects.get(id=metadata['user_id'])
+        property = Property.objects.get(id=metadata['property_id'])
+
+        # Create booking with dummy dates (we'll refine later)
+        Booking.objects.create(
+            guest=user,
+            property=property,
+            check_in="2025-07-01",  # temporary
+            check_out="2025-07-05"
+        )
+
+    return HttpResponse(status=200)
