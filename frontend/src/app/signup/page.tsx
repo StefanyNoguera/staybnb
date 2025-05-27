@@ -1,13 +1,14 @@
-import { NextPage } from 'next';
-import { useState, ChangeEvent, FormEvent } from 'react';
-import api from '../lib/api';
+"use client";
 
-const Signup: NextPage = () => {
+import React, { useState, ChangeEvent, FormEvent } from 'react';
+import api from '../../lib/api';
+
+export default function Signup() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [message, setMessage] = useState<string>('');
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,6 +50,5 @@ const Signup: NextPage = () => {
       {message && <p className="mt-4">{message}</p>}
     </div>
   );
-};
-
-export default Signup;
+}
+  
